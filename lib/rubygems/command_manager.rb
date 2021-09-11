@@ -58,6 +58,7 @@ class Gem::CommandManager
     :push,
     :query,
     :rdoc,
+    :rebuild,
     :search,
     :server,
     :signin,
