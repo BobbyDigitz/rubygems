@@ -6,31 +6,27 @@ To work on Bundler, you'll probably want to do a couple of things:
 
 * Install `graphviz` package using your package manager:
 
-        $ sudo apt-get install graphviz -y
+        sudo apt-get install graphviz -y
 
     And for OS X (with brew installed):
 
-        $ brew install graphviz
+        brew install graphviz
 
-* From the rubygems root directory change into the bundler directory:
+* Install development dependencies and Bundler's test dependencies from the rubygems root directory:
 
-        $ cd bundler
+        bin/rake setup spec:parallel_deps
 
-* Install Bundler's development dependencies:
+* Change into the bundler directory:
 
-        $ rake spec:deps
+        cd bundler
 
-* Run the test suite, to make sure things are working:
+* Now you can run the test suite in parallel:
 
-        $ bin/rake spec
-
-* Optionally, you can run the test suite in parallel:
-
-        $ bin/parallel_rspec
+        bin/parallel_rspec
 
 * Set up a shell alias to run Bundler from your clone, e.g. a Bash alias ([follow these instructions](https://www.moncefbelyamani.com/create-aliases-in-bash-profile-to-assign-shortcuts-for-common-terminal-commands/) for adding aliases to your `~/.bashrc` profile):
 
-        $ alias dbundle='ruby /path/to/bundler/repo/spec/support/bundle.rb'
+        alias dbundle='ruby /path/to/bundler/repo/spec/support/bundle.rb'
 
 ## Jointly developing on Bundler and RubyGems
 

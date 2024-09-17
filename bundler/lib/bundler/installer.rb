@@ -90,7 +90,7 @@ module Bundler
 
         Gem::Specification.reset # invalidate gem specification cache so that installed gems are immediately available
 
-        lock unless Bundler.frozen_bundle?
+        lock
         Standalone.new(options[:standalone], @definition).generate if options[:standalone]
       end
     end
@@ -136,16 +136,12 @@ module Bundler
 
         mode = Gem.win_platform? ? "wb:UTF-8" : "w"
         require "erb"
-        content = if RUBY_VERSION >= "2.6"
-          ERB.new(template, :trim_mode => "-").result(binding)
-        else
-          ERB.new(template, nil, "-").result(binding)
-        end
+        content = ERB.new(template, trim_mode: "-").result(binding)
 
-        File.write(binstub_path, content, :mode => mode, :perm => 0o777 & ~File.umask)
+        File.write(binstub_path, content, mode: mode, perm: 0o777 & ~File.umask)
         if Gem.win_platform? || options[:all_platforms]
           prefix = "@ruby -x \"%~f0\" %*\n@exit /b %ERRORLEVEL%\n\n"
-          File.write("#{binstub_path}.cmd", prefix + content, :mode => mode)
+          File.write("#{binstub_path}.cmd", prefix + content, mode: mode)
         end
       end
 
@@ -183,16 +179,12 @@ module Bundler
 
         mode = Gem.win_platform? ? "wb:UTF-8" : "w"
         require "erb"
-        content = if RUBY_VERSION >= "2.6"
-          ERB.new(template, :trim_mode => "-").result(binding)
-        else
-          ERB.new(template, nil, "-").result(binding)
-        end
+        content = ERB.new(template, trim_mode: "-").result(binding)
 
-        File.write("#{bin_path}/#{executable}", content, :mode => mode, :perm => 0o755)
+        File.write("#{bin_path}/#{executable}", content, mode: mode, perm: 0o755)
         if Gem.win_platform? || options[:all_platforms]
           prefix = "@ruby -x \"%~f0\" %*\n@exit /b %ERRORLEVEL%\n\n"
-          File.write("#{bin_path}/#{executable}.cmd", prefix + content, :mode => mode)
+          File.write("#{bin_path}/#{executable}.cmd", prefix + content, mode: mode)
         end
       end
     end
@@ -222,19 +214,17 @@ module Bundler
     end
 
     def load_plugins
-      Bundler.rubygems.load_plugins
+      Gem.load_plugins
 
       requested_path_gems = @definition.requested_specs.select {|s| s.source.is_a?(Source::Path) }
       path_plugin_files = requested_path_gems.map do |spec|
-        begin
-          Bundler.rubygems.spec_matches_for_glob(spec, "rubygems_plugin#{Bundler.rubygems.suffix_pattern}")
-        rescue TypeError
-          error_message = "#{spec.name} #{spec.version} has an invalid gemspec"
-          raise Gem::InvalidSpecificationException, error_message
-        end
+        Bundler.rubygems.spec_matches_for_glob(spec, "rubygems_plugin#{Bundler.rubygems.suffix_pattern}")
+      rescue TypeError
+        error_message = "#{spec.name} #{spec.version} has an invalid gemspec"
+        raise Gem::InvalidSpecificationException, error_message
       end.flatten
-      Bundler.rubygems.load_plugin_files(path_plugin_files)
-      Bundler.rubygems.load_env_plugins
+      Gem.load_plugin_files(path_plugin_files)
+      Gem.load_env_plugins
     end
 
     def ensure_specs_are_compatible!
@@ -259,23 +249,19 @@ module Bundler
 
     # returns whether or not a re-resolve was needed
     def resolve_if_needed(options)
+      @definition.resolution_mode = options
+
       if !@definition.unlocking? && !options["force"] && !Bundler.settings[:inline] && Bundler.default_lockfile.file?
         return false if @definition.nothing_changed? && !@definition.missing_specs?
       end
 
-      if options["local"]
-        @definition.resolve_with_cache!
-      elsif options["prefer-local"]
-        @definition.resolve_prefering_local!
-      else
-        @definition.resolve_remotely!
-      end
+      @definition.setup_sources_for_resolve
 
       true
     end
 
-    def lock(opts = {})
-      @definition.lock(Bundler.default_lockfile, opts[:preserve_unknown_sections])
+    def lock
+      @definition.lock
     end
   end
 end

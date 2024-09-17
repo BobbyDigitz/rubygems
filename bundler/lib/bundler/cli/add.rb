@@ -28,9 +28,9 @@ module Bundler
       dependencies = gems.map {|g| Bundler::Dependency.new(g, version, options) }
 
       Injector.inject(dependencies,
-        :conservative_versioning => options[:version].nil?, # Perform conservative versioning only when version is not specified
-        :optimistic => options[:optimistic],
-        :strict => options[:strict])
+        conservative_versioning: options[:version].nil?, # Perform conservative versioning only when version is not specified
+        optimistic: options[:optimistic],
+        strict: options[:strict])
     end
 
     def validate_options!
@@ -40,7 +40,7 @@ module Bundler
       raise InvalidOption, "Please specify gems to add." if gems.empty?
 
       version.to_a.each do |v|
-        raise InvalidOption, "Invalid gem requirement pattern '#{v}'" unless Gem::Requirement::PATTERN =~ v.to_s
+        raise InvalidOption, "Invalid gem requirement pattern '#{v}'" unless Gem::Requirement::PATTERN.match?(v.to_s)
       end
     end
   end

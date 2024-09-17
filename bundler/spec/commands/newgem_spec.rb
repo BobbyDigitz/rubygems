@@ -12,14 +12,14 @@ RSpec.describe "bundle gem" do
 
   def bundle_exec_rubocop
     prepare_gemspec(bundled_app(gem_name, "#{gem_name}.gemspec"))
-    bundle "config set path #{rubocop_gems}", :dir => bundled_app(gem_name)
-    bundle "exec rubocop --debug --config .rubocop.yml", :dir => bundled_app(gem_name)
+    bundle "config set path #{rubocop_gems}", dir: bundled_app(gem_name)
+    bundle "exec rubocop --debug --config .rubocop.yml", dir: bundled_app(gem_name)
   end
 
   def bundle_exec_standardrb
     prepare_gemspec(bundled_app(gem_name, "#{gem_name}.gemspec"))
-    bundle "config set path #{standard_gems}", :dir => bundled_app(gem_name)
-    bundle "exec standardrb --debug", :dir => bundled_app(gem_name)
+    bundle "config set path #{standard_gems}", dir: bundled_app(gem_name)
+    bundle "exec standardrb --debug", dir: bundled_app(gem_name)
   end
 
   let(:generated_gemspec) { Bundler.load_gemspec_uncached(bundled_app(gem_name).join("#{gem_name}.gemspec")) }
@@ -63,7 +63,7 @@ RSpec.describe "bundle gem" do
       end
 
       it "properly initializes git repo", :readline do
-        bundle "gem #{gem_name}", :dir => bundled_app("path with spaces")
+        bundle "gem #{gem_name}", dir: bundled_app("path with spaces")
         expect(bundled_app("path with spaces/#{gem_name}/.git")).to exist
       end
     end
@@ -103,7 +103,7 @@ RSpec.describe "bundle gem" do
       expect(bundled_app("#{gem_name}/README.md").read).to match(%r{https://github\.com/bundleuser/#{gem_name}/blob/.*/CODE_OF_CONDUCT.md})
     end
 
-    it "generates the README with a section for the Code of Conduct, respecting the configured git default branch", :git => ">= 2.28.0" do
+    it "generates the README with a section for the Code of Conduct, respecting the configured git default branch", git: ">= 2.28.0" do
       sys_exec("git config --global init.defaultBranch main")
       bundle "gem #{gem_name} --coc"
 
@@ -148,7 +148,7 @@ RSpec.describe "bundle gem" do
   end
 
   shared_examples_for "--rubocop flag" do
-    context "is deprecated", :bundler => "< 3" do
+    context "is deprecated", bundler: "< 3" do
       before do
         bundle "gem #{gem_name} --rubocop"
       end
@@ -179,7 +179,7 @@ RSpec.describe "bundle gem" do
   end
 
   shared_examples_for "--no-rubocop flag" do
-    context "is deprecated", :bundler => "< 3" do
+    context "is deprecated", bundler: "< 3" do
       define_negated_matcher :exclude, :include
 
       before do
@@ -310,30 +310,30 @@ RSpec.describe "bundle gem" do
     expect(last_command).to be_success
   end
 
-  it "has no rubocop offenses when using --ext and --linter=rubocop flag", :readline do
+  it "has no rubocop offenses when using --ext=c and --linter=rubocop flag", :readline do
     skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
-    bundle "gem #{gem_name} --ext --linter=rubocop"
+    bundle "gem #{gem_name} --ext=c --linter=rubocop"
     bundle_exec_rubocop
     expect(last_command).to be_success
   end
 
-  it "has no rubocop offenses when using --ext, --test=minitest, and --linter=rubocop flag", :readline do
+  it "has no rubocop offenses when using --ext=c, --test=minitest, and --linter=rubocop flag", :readline do
     skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
-    bundle "gem #{gem_name} --ext --test=minitest --linter=rubocop"
+    bundle "gem #{gem_name} --ext=c --test=minitest --linter=rubocop"
     bundle_exec_rubocop
     expect(last_command).to be_success
   end
 
-  it "has no rubocop offenses when using --ext, --test=rspec, and --linter=rubocop flag", :readline do
+  it "has no rubocop offenses when using --ext=c, --test=rspec, and --linter=rubocop flag", :readline do
     skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
-    bundle "gem #{gem_name} --ext --test=rspec --linter=rubocop"
+    bundle "gem #{gem_name} --ext=c --test=rspec --linter=rubocop"
     bundle_exec_rubocop
     expect(last_command).to be_success
   end
 
-  it "has no rubocop offenses when using --ext, --ext=test-unit, and --linter=rubocop flag", :readline do
+  it "has no rubocop offenses when using --ext=c, --test=test-unit, and --linter=rubocop flag", :readline do
     skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
-    bundle "gem #{gem_name} --ext --test=test-unit --linter=rubocop"
+    bundle "gem #{gem_name} --ext=c --test=test-unit --linter=rubocop"
     bundle_exec_rubocop
     expect(last_command).to be_success
   end
@@ -345,10 +345,45 @@ RSpec.describe "bundle gem" do
     expect(last_command).to be_success
   end
 
+  it "has no rubocop offenses when using --ext=rust and --linter=rubocop flag", :readline do
+    skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
+    skip "RubyGems incompatible with Rust builder" if ::Gem::Version.new("3.3.11") > ::Gem.rubygems_version
+
+    bundle "gem #{gem_name} --ext=rust --linter=rubocop"
+    bundle_exec_rubocop
+    expect(last_command).to be_success
+  end
+
+  it "has no rubocop offenses when using --ext=rust, --test=minitest, and --linter=rubocop flag", :readline do
+    skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
+    skip "RubyGems incompatible with Rust builder" if ::Gem::Version.new("3.3.11") > ::Gem.rubygems_version
+
+    bundle "gem #{gem_name} --ext=rust --test=minitest --linter=rubocop"
+    bundle_exec_rubocop
+    expect(last_command).to be_success
+  end
+
+  it "has no rubocop offenses when using --ext=rust, --test=rspec, and --linter=rubocop flag", :readline do
+    skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
+    skip "RubyGems incompatible with Rust builder" if ::Gem::Version.new("3.3.11") > ::Gem.rubygems_version
+
+    bundle "gem #{gem_name} --ext=rust --test=rspec --linter=rubocop"
+    bundle_exec_rubocop
+    expect(last_command).to be_success
+  end
+
+  it "has no rubocop offenses when using --ext=rust, --test=test-unit, and --linter=rubocop flag", :readline do
+    skip "ruby_core has an 'ast.rb' file that gets in the middle and breaks this spec" if ruby_core?
+    skip "RubyGems incompatible with Rust builder" if ::Gem::Version.new("3.3.11") > ::Gem.rubygems_version
+
+    bundle "gem #{gem_name} --ext=rust --test=test-unit --linter=rubocop"
+    bundle_exec_rubocop
+    expect(last_command).to be_success
+  end
+
   shared_examples_for "CI config is absent" do
     it "does not create any CI files" do
       expect(bundled_app("#{gem_name}/.github/workflows/main.yml")).to_not exist
-      expect(bundled_app("#{gem_name}/.travis.yml")).to_not exist
       expect(bundled_app("#{gem_name}/.gitlab-ci.yml")).to_not exist
       expect(bundled_app("#{gem_name}/.circleci/config.yml")).to_not exist
     end
@@ -400,7 +435,7 @@ RSpec.describe "bundle gem" do
       load_paths = [lib_dir, spec_dir]
       load_path_str = "-I#{load_paths.join(File::PATH_SEPARATOR)}"
 
-      sys_exec "#{Gem.ruby} #{load_path_str} #{bindir.join("bundle")} gem #{gem_name}", :env => { "PATH" => "" }
+      sys_exec "#{Gem.ruby} #{load_path_str} #{bindir.join("bundle")} gem #{gem_name}", env: { "PATH" => "" }
     end
 
     it "creates the gem without the need for git" do
@@ -421,10 +456,10 @@ RSpec.describe "bundle gem" do
 
     prepare_gemspec(bundled_app("newgem", "newgem.gemspec"))
 
-    gems = ["rake-13.0.1"]
-    path = Bundler.feature_flag.default_install_uses_path? ? local_gem_path(:base => bundled_app("newgem")) : system_gem_path
-    system_gems gems, :path => path
-    bundle "exec rake build", :dir => bundled_app("newgem")
+    gems = ["rake-#{rake_version}"]
+    path = Bundler.feature_flag.default_install_uses_path? ? local_gem_path(base: bundled_app("newgem")) : system_gem_path
+    system_gems gems, path: path
+    bundle "exec rake build", dir: bundled_app("newgem")
 
     expect(last_command.stdboth).not_to include("ERROR")
   end
@@ -433,7 +468,7 @@ RSpec.describe "bundle gem" do
     it "resolves ." do
       create_temporary_dir("tmp")
 
-      bundle "gem .", :dir => bundled_app("tmp")
+      bundle "gem .", dir: bundled_app("tmp")
 
       expect(bundled_app("tmp/lib/tmp.rb")).to exist
     end
@@ -441,7 +476,7 @@ RSpec.describe "bundle gem" do
     it "resolves .." do
       create_temporary_dir("temp/empty_dir")
 
-      bundle "gem ..", :dir => bundled_app("temp/empty_dir")
+      bundle "gem ..", dir: bundled_app("temp/empty_dir")
 
       expect(bundled_app("temp/lib/temp.rb")).to exist
     end
@@ -449,7 +484,7 @@ RSpec.describe "bundle gem" do
     it "resolves relative directory" do
       create_temporary_dir("tmp/empty/tmp")
 
-      bundle "gem ../../empty", :dir => bundled_app("tmp/empty/tmp")
+      bundle "gem ../../empty", dir: bundled_app("tmp/empty/tmp")
 
       expect(bundled_app("tmp/empty/lib/empty.rb")).to exist
     end
@@ -598,17 +633,25 @@ RSpec.describe "bundle gem" do
     it "does not include the gemspec file in files" do
       bundle "gem #{gem_name}"
 
-      bundler_gemspec = Bundler::GemHelper.new(gemspec_dir).gemspec
+      bundler_gemspec = Bundler::GemHelper.new(bundled_app(gem_name), gem_name).gemspec
 
       expect(bundler_gemspec.files).not_to include("#{gem_name}.gemspec")
+    end
+
+    it "does not include the Gemfile file in files" do
+      bundle "gem #{gem_name}"
+
+      bundler_gemspec = Bundler::GemHelper.new(bundled_app(gem_name), gem_name).gemspec
+
+      expect(bundler_gemspec.files).not_to include("Gemfile")
     end
 
     it "runs rake without problems" do
       bundle "gem #{gem_name}"
 
-      system_gems ["rake-13.0.1"]
+      system_gems ["rake-#{rake_version}"]
 
-      rakefile = strip_whitespace <<-RAKEFILE
+      rakefile = <<~RAKEFILE
         task :default do
           puts 'SUCCESS'
         end
@@ -617,7 +660,7 @@ RSpec.describe "bundle gem" do
         file.puts rakefile
       end
 
-      sys_exec(rake, :dir => bundled_app(gem_name))
+      sys_exec(rake, dir: bundled_app(gem_name))
       expect(out).to include("SUCCESS")
     end
 
@@ -754,17 +797,13 @@ RSpec.describe "bundle gem" do
       end
 
       it "creates a default rake task to run the test suite" do
-        rakefile = strip_whitespace <<-RAKEFILE
+        rakefile = <<~RAKEFILE
           # frozen_string_literal: true
 
           require "bundler/gem_tasks"
-          require "rake/testtask"
+          require "minitest/test_task"
 
-          Rake::TestTask.new(:test) do |t|
-            t.libs << "test"
-            t.libs << "lib"
-            t.test_files = FileList["test/**/test_*.rb"]
-          end
+          Minitest::TestTask.create
 
           task default: :test
         RAKEFILE
@@ -812,7 +851,7 @@ RSpec.describe "bundle gem" do
       end
 
       it "creates a default rake task to run the test suite" do
-        rakefile = strip_whitespace <<-RAKEFILE
+        rakefile = <<~RAKEFILE
           # frozen_string_literal: true
 
           require "bundler/gem_tasks"
@@ -888,7 +927,6 @@ RSpec.describe "bundle gem" do
         bundle "gem #{gem_name}"
 
         expect(bundled_app("#{gem_name}/.github/workflows/main.yml")).to_not exist
-        expect(bundled_app("#{gem_name}/.travis.yml")).to_not exist
         expect(bundled_app("#{gem_name}/.gitlab-ci.yml")).to_not exist
         expect(bundled_app("#{gem_name}/.circleci/config.yml")).to_not exist
       end
@@ -900,6 +938,12 @@ RSpec.describe "bundle gem" do
 
         expect(bundled_app("#{gem_name}/.github/workflows/main.yml")).to exist
       end
+
+      it "contained .gitlab-ci.yml into ignore list" do
+        bundle "gem #{gem_name} --ci=github"
+
+        expect(bundled_app("#{gem_name}/#{gem_name}.gemspec").read).to include(".git .github appveyor")
+      end
     end
 
     context "--ci set to gitlab" do
@@ -907,6 +951,12 @@ RSpec.describe "bundle gem" do
         bundle "gem #{gem_name} --ci=gitlab"
 
         expect(bundled_app("#{gem_name}/.gitlab-ci.yml")).to exist
+      end
+
+      it "contained .gitlab-ci.yml into ignore list" do
+        bundle "gem #{gem_name} --ci=gitlab"
+
+        expect(bundled_app("#{gem_name}/#{gem_name}.gemspec").read).to include(".git .gitlab-ci.yml appveyor")
       end
     end
 
@@ -916,20 +966,17 @@ RSpec.describe "bundle gem" do
 
         expect(bundled_app("#{gem_name}/.circleci/config.yml")).to exist
       end
-    end
 
-    context "--ci set to travis" do
-      it "generates a Travis CI config file" do
-        bundle "gem #{gem_name} --ci=travis"
+      it "contained .circleci into ignore list" do
+        bundle "gem #{gem_name} --ci=circle"
 
-        expect(bundled_app("#{gem_name}/.travis.yml")).to exist
+        expect(bundled_app("#{gem_name}/#{gem_name}.gemspec").read).to include(".git .circleci appveyor")
       end
     end
 
     context "gem.ci setting set to none" do
       it "doesn't generate any CI config" do
         expect(bundled_app("#{gem_name}/.github/workflows/main.yml")).to_not exist
-        expect(bundled_app("#{gem_name}/.travis.yml")).to_not exist
         expect(bundled_app("#{gem_name}/.gitlab-ci.yml")).to_not exist
         expect(bundled_app("#{gem_name}/.circleci/config.yml")).to_not exist
       end
@@ -941,15 +988,6 @@ RSpec.describe "bundle gem" do
         bundle "gem #{gem_name}"
 
         expect(bundled_app("#{gem_name}/.github/workflows/main.yml")).to exist
-      end
-    end
-
-    context "gem.ci setting set to travis" do
-      it "generates a Travis CI config file" do
-        bundle "config set gem.ci travis"
-        bundle "gem #{gem_name}"
-
-        expect(bundled_app("#{gem_name}/.travis.yml")).to exist
       end
     end
 
@@ -1071,7 +1109,7 @@ RSpec.describe "bundle gem" do
       end
     end
 
-    context "gem.rubocop setting set to true", :bundler => "< 3" do
+    context "gem.rubocop setting set to true", bundler: "< 3" do
       before do
         bundle "config set gem.rubocop true"
         bundle "gem #{gem_name}"
@@ -1322,11 +1360,33 @@ RSpec.describe "bundle gem" do
 
     include_examples "generating a gem"
 
-    context "--ext parameter set" do
-      let(:flags) { "--ext" }
+    context "--ext parameter with no value" do
+      context "is deprecated", bundler: "< 3" do
+        it "prints deprecation when used after gem name" do
+          bundle ["gem", "--ext", gem_name].compact.join(" ")
+          expect(err).to include "[DEPRECATED]"
+          expect(err).to include "`--ext` with no arguments has been deprecated"
+          expect(bundled_app("#{gem_name}/ext/#{gem_name}/#{gem_name}.c")).to exist
+        end
+
+        it "prints deprecation when used before gem name" do
+          bundle ["gem", gem_name, "--ext"].compact.join(" ")
+          expect(err).to include "[DEPRECATED]"
+          expect(err).to include "`--ext` with no arguments has been deprecated"
+          expect(bundled_app("#{gem_name}/ext/#{gem_name}/#{gem_name}.c")).to exist
+        end
+      end
+    end
+
+    context "--ext parameter set with C" do
+      let(:flags) { "--ext=c" }
 
       before do
         bundle ["gem", gem_name, flags].compact.join(" ")
+      end
+
+      it "is not deprecated" do
+        expect(err).not_to include "[DEPRECATED] Option `--ext` without explicit value is deprecated."
       end
 
       it "builds ext skeleton" do
@@ -1335,12 +1395,15 @@ RSpec.describe "bundle gem" do
         expect(bundled_app("#{gem_name}/ext/#{gem_name}/#{gem_name}.c")).to exist
       end
 
-      it "includes rake-compiler" do
+      it "includes rake-compiler, but no Rust related changes" do
         expect(bundled_app("#{gem_name}/Gemfile").read).to include('gem "rake-compiler"')
+
+        expect(bundled_app("#{gem_name}/Gemfile").read).to_not include('gem "rb_sys"')
+        expect(bundled_app("#{gem_name}/#{gem_name}.gemspec").read).to_not include('spec.required_rubygems_version = ">= ')
       end
 
       it "depends on compile task for build" do
-        rakefile = strip_whitespace <<-RAKEFILE
+        rakefile = <<~RAKEFILE
           # frozen_string_literal: true
 
           require "bundler/gem_tasks"
@@ -1348,11 +1411,73 @@ RSpec.describe "bundle gem" do
 
           task build: :compile
 
-          Rake::ExtensionTask.new("#{gem_name}") do |ext|
+          GEMSPEC = Gem::Specification.load("#{gem_name}.gemspec")
+
+          Rake::ExtensionTask.new("#{gem_name}", GEMSPEC) do |ext|
             ext.lib_dir = "lib/#{gem_name}"
           end
 
           task default: %i[clobber compile]
+        RAKEFILE
+
+        expect(bundled_app("#{gem_name}/Rakefile").read).to eq(rakefile)
+      end
+    end
+
+    context "--ext parameter set with rust and old RubyGems" do
+      it "fails in friendly way" do
+        if ::Gem::Version.new("3.3.11") <= ::Gem.rubygems_version
+          skip "RubyGems compatible with Rust builder"
+        end
+
+        expect do
+          bundle ["gem", gem_name, "--ext=rust"].compact.join(" ")
+        end.to raise_error(RuntimeError, /too old to build Rust extension/)
+      end
+    end
+
+    context "--ext parameter set with rust" do
+      let(:flags) { "--ext=rust" }
+
+      before do
+        skip "RubyGems incompatible with Rust builder" if ::Gem::Version.new("3.3.11") > ::Gem.rubygems_version
+
+        bundle ["gem", gem_name, flags].compact.join(" ")
+      end
+
+      it "is not deprecated" do
+        expect(err).not_to include "[DEPRECATED] Option `--ext` without explicit value is deprecated."
+      end
+
+      it "builds ext skeleton" do
+        expect(bundled_app("#{gem_name}/Cargo.toml")).to exist
+        expect(bundled_app("#{gem_name}/ext/#{gem_name}/Cargo.toml")).to exist
+        expect(bundled_app("#{gem_name}/ext/#{gem_name}/extconf.rb")).to exist
+        expect(bundled_app("#{gem_name}/ext/#{gem_name}/src/lib.rs")).to exist
+      end
+
+      it "includes rake-compiler, rb_sys gems and required_rubygems_version constraint" do
+        expect(bundled_app("#{gem_name}/Gemfile").read).to include('gem "rake-compiler"')
+        expect(bundled_app("#{gem_name}/Gemfile").read).to include('gem "rb_sys"')
+        expect(bundled_app("#{gem_name}/#{gem_name}.gemspec").read).to include('spec.required_rubygems_version = ">= ')
+      end
+
+      it "depends on compile task for build" do
+        rakefile = <<~RAKEFILE
+          # frozen_string_literal: true
+
+          require "bundler/gem_tasks"
+          require "rb_sys/extensiontask"
+
+          task build: :compile
+
+          GEMSPEC = Gem::Specification.load("#{gem_name}.gemspec")
+
+          RbSys::ExtensionTask.new("#{gem_name}", GEMSPEC) do |ext|
+            ext.lib_dir = "lib/#{gem_name}"
+          end
+
+          task default: :compile
         RAKEFILE
 
         expect(bundled_app("#{gem_name}/Rakefile").read).to eq(rakefile)
@@ -1388,22 +1513,22 @@ RSpec.describe "bundle gem" do
     end
 
     it "fails gracefully with a ." do
-      bundle "gem foo.gemspec", :raise_on_error => false
+      bundle "gem foo.gemspec", raise_on_error: false
       expect(err).to end_with("Invalid gem name foo.gemspec -- `Foo.gemspec` is an invalid constant name")
     end
 
     it "fails gracefully with a ^" do
-      bundle "gem ^", :raise_on_error => false
+      bundle "gem ^", raise_on_error: false
       expect(err).to end_with("Invalid gem name ^ -- `^` is an invalid constant name")
     end
 
     it "fails gracefully with a space" do
-      bundle "gem 'foo bar'", :raise_on_error => false
+      bundle "gem 'foo bar'", raise_on_error: false
       expect(err).to end_with("Invalid gem name foo bar -- `Foo bar` is an invalid constant name")
     end
 
     it "fails gracefully when multiple names are passed" do
-      bundle "gem foo bar baz", :raise_on_error => false
+      bundle "gem foo bar baz", raise_on_error: false
       expect(err).to eq(<<-E.strip)
 ERROR: "bundle gem" was called with arguments ["foo", "bar", "baz"]
 Usage: "bundle gem NAME [OPTIONS]"
@@ -1413,7 +1538,7 @@ Usage: "bundle gem NAME [OPTIONS]"
 
   describe "#ensure_safe_gem_name", :readline do
     before do
-      bundle "gem #{subject}", :raise_on_error => false
+      bundle "gem #{subject}", raise_on_error: false
     end
 
     context "with an existing const name" do
@@ -1446,7 +1571,7 @@ Usage: "bundle gem NAME [OPTIONS]"
       end
 
       expect(bundled_app("foobar/spec/spec_helper.rb")).to exist
-      rakefile = strip_whitespace <<-RAKEFILE
+      rakefile = <<~RAKEFILE
         # frozen_string_literal: true
 
         require "bundler/gem_tasks"
@@ -1508,7 +1633,7 @@ Usage: "bundle gem NAME [OPTIONS]"
   context "on conflicts with a previously created file", :readline do
     it "should fail gracefully" do
       FileUtils.touch(bundled_app("conflict-foobar"))
-      bundle "gem conflict-foobar", :raise_on_error => false
+      bundle "gem conflict-foobar", raise_on_error: false
       expect(err).to eq("Couldn't create a new gem named `conflict-foobar` because there's an existing file named `conflict-foobar`.")
       expect(exitstatus).to eql(32)
     end

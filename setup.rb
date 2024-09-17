@@ -1,10 +1,13 @@
 # frozen_string_literal: true
+
 #--
 # Copyright 2006, 2007 by Chad Fowler, Rich Kilmer, Jim Weirich, Eric Hodel
 # and others.
 # All rights reserved.
 # See LICENSE.txt for permissions.
 #++
+
+abort "RubyGems only supports Ruby 3.0 or higher" if RUBY_VERSION < "3.0.0"
 
 # Make sure rubygems isn't already loaded.
 if ENV["RUBYOPT"] || defined? Gem
@@ -26,7 +29,7 @@ Gem::CommandManager.instance.register_command :setup
 
 args = ARGV.clone
 if ENV["GEM_PREV_VER"]
-  args = [ "--previous-version", ENV["GEM_PREV_VER"] ] + args
+  args = ["--previous-version", ENV["GEM_PREV_VER"]] + args
 end
 args.unshift "setup"
 

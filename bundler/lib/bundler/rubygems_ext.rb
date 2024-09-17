@@ -2,6 +2,8 @@
 
 require "pathname"
 
+require "rubygems" unless defined?(Gem)
+
 require "rubygems/specification"
 
 # We can't let `Gem::Source` be autoloaded in the `Gem::Specification#source`
@@ -16,6 +18,7 @@ require "rubygems/specification"
 require "rubygems/source"
 
 require_relative "match_metadata"
+require_relative "force_platform"
 require_relative "match_platform"
 
 # Cherry-pick fixes to `Gem.ruby_version` to be useful for modern Bundler
@@ -45,7 +48,7 @@ module Gem
 
     def full_gem_path
       if source.respond_to?(:root)
-        Pathname.new(loaded_from).dirname.expand_path(source.root).to_s.tap {|x| x.untaint if RUBY_VERSION < "2.7" }
+        Pathname.new(loaded_from).dirname.expand_path(source.root).to_s
       else
         rg_full_gem_path
       end
@@ -65,7 +68,9 @@ module Gem
 
     alias_method :rg_extension_dir, :extension_dir
     def extension_dir
-      @bundler_extension_dir ||= if source.respond_to?(:extension_dir_name)
+      # following instance variable is already used in original method
+      # and that is the reason to prefix it with bundler_ and add rubocop exception
+      @bundler_extension_dir ||= if source.respond_to?(:extension_dir_name) # rubocop:disable Naming/MemoizedInstanceVariableName
         unique_extension_dir = [source.extension_dir_name, File.basename(full_gem_path)].uniq.join("-")
         File.expand_path(File.join(extensions_dir, unique_extension_dir))
       else
@@ -73,7 +78,7 @@ module Gem
       end
     end
 
-    remove_method :gem_dir if instance_methods(false).include?(:gem_dir)
+    remove_method :gem_dir
     def gem_dir
       full_gem_path
     end
@@ -114,17 +119,6 @@ module Gem
       gemfile
     end
 
-    # Backfill missing YAML require when not defined. Fixed since 3.1.0.pre1.
-    module YamlBackfiller
-      def to_yaml(opts = {})
-        Gem.load_yaml unless defined?(::YAML)
-
-        super(opts)
-      end
-    end
-
-    prepend YamlBackfiller
-
     def nondevelopment_dependencies
       dependencies - development_dependencies
     end
@@ -153,12 +147,16 @@ module Gem
   end
 
   class Dependency
+    include ::Bundler::ForcePlatform
+
     attr_accessor :source, :groups
 
     alias_method :eql?, :==
 
     def force_ruby_platform
-      false
+      return @force_ruby_platform if defined?(@force_ruby_platform) && !@force_ruby_platform.nil?
+
+      @force_ruby_platform = default_force_ruby_platform
     end
 
     def encode_with(coder)
@@ -181,37 +179,7 @@ module Gem
     end
   end
 
-  # comparison is done order independently since rubygems 3.2.0.rc.2
-  unless Gem::Requirement.new("> 1", "< 2") == Gem::Requirement.new("< 2", "> 1")
-    class Requirement
-      module OrderIndependentComparison
-        def ==(other)
-          return unless Gem::Requirement === other
-
-          if _requirements_sorted? && other._requirements_sorted?
-            super
-          else
-            _with_sorted_requirements == other._with_sorted_requirements
-          end
-        end
-
-        protected
-
-        def _requirements_sorted?
-          return @_are_requirements_sorted if defined?(@_are_requirements_sorted)
-          strings = as_list
-          @_are_requirements_sorted = strings == strings.sort
-        end
-
-        def _with_sorted_requirements
-          @_with_sorted_requirements ||= _requirements_sorted? ? self : self.class.new(as_list.sort)
-        end
-      end
-
-      prepend OrderIndependentComparison
-    end
-  end
-
+  # Requirements using lambda operator differentiate trailing zeros since rubygems 3.2.6
   if Gem::Requirement.new("~> 2.0").hash == Gem::Requirement.new("~> 2.0.0").hash
     class Requirement
       module CorrectHashForLambdaOperator
@@ -277,6 +245,10 @@ module Gem
         without_gnu_nor_abi_modifiers
       end
     end
+
+    if RUBY_ENGINE == "truffleruby" && !defined?(REUSE_AS_BINARY_ON_TRUFFLERUBY)
+      REUSE_AS_BINARY_ON_TRUFFLERUBY = %w[libv8 libv8-node sorbet-static].freeze
+    end
   end
 
   Platform.singleton_class.module_eval do
@@ -308,18 +280,48 @@ module Gem
     end
   end
 
-  require "rubygems/util"
+  # On universal Rubies, resolve the "universal" arch to the real CPU arch, without changing the extension directory.
+  class BasicSpecification
+    if /^universal\.(?<arch>.*?)-/ =~ (CROSS_COMPILING || RUBY_PLATFORM)
+      local_platform = Platform.local
+      if local_platform.cpu == "universal"
+        ORIGINAL_LOCAL_PLATFORM = local_platform.to_s.freeze
 
-  Util.singleton_class.module_eval do
-    if Util.singleton_methods.include?(:glob_files_in_dir) # since 3.0.0.beta.2
-      remove_method :glob_files_in_dir
+        local_platform.cpu = if arch == "arm64e" # arm64e is only permitted for Apple system binaries
+          "arm64"
+        else
+          arch
+        end
+
+        def extensions_dir
+          @extensions_dir ||=
+            Gem.default_ext_dir_for(base_dir) || File.join(base_dir, "extensions", ORIGINAL_LOCAL_PLATFORM, Gem.extension_api_version)
+        end
+      end
+    end
+  end
+
+  require "rubygems/name_tuple"
+
+  class NameTuple
+    # Versions of RubyGems before about 3.5.0 don't to_s the platform.
+    unless Gem::NameTuple.new("a", Gem::Version.new("1"), Gem::Platform.new("x86_64-linux")).platform.is_a?(String)
+      alias_method :initialize_with_platform, :initialize
+
+      def initialize(name, version, platform=Gem::Platform::RUBY)
+        if Gem::Platform === platform
+          initialize_with_platform(name, version, platform.to_s)
+        else
+          initialize_with_platform(name, version, platform)
+        end
+      end
     end
 
-    def glob_files_in_dir(glob, base_path)
-      if RUBY_VERSION >= "2.5"
-        Dir.glob(glob, :base => base_path).map! {|f| File.expand_path(f, base_path) }
+    def lock_name
+      if platform == Gem::Platform::RUBY
+        "#{name} (#{version})"
       else
-        Dir.glob(File.join(base_path.to_s.gsub(/[\[\]]/, '\\\\\\&'), glob)).map! {|f| File.expand_path(f) }
+        "#{name} (#{version}-#{platform})"
       end
     end
   end

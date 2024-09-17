@@ -37,8 +37,8 @@ here: https://guides.rubygems.org/contributing/
 > likely using a global Ruby installation (like the one packaged by your OS),
 > which sets `GEM_HOME` to a location regular users can't write to. Consider
 > using a Ruby version manager like [RVM](https://github.com/rvm/rvm),
-> [rbenv](https://github.com/rbenv/rbenv) or
-> [chruby](https://github.com/postmodern/chruby). These will install Ruby to a
+> [rbenv](https://github.com/rbenv/rbenv),
+> [chruby](https://github.com/postmodern/chruby) or [asdf](https://github.com/asdf-vm/asdf-ruby). These will install Ruby to a
 > location regular users can write to, so you won't run into permission issues.
 > Alternatively, consider setting `GEM_HOME` environment variable to a writable
 > location with something like `export GEM_HOME=/tmp/rubygems.gems` and try
@@ -48,7 +48,7 @@ here: https://guides.rubygems.org/contributing/
 
 To run commands like `gem install` from the repo:
 
-    ruby -Ilib bin/gem install
+    ruby -Ilib exe/gem install
 
 To run commands like `bundle install` from the repo:
 
@@ -56,15 +56,15 @@ To run commands like `bundle install` from the repo:
 
 ### Running Tests
 
-To run the entire test suite you can use: 
+To run the entire test suite you can use:
 
     rake test
 
-To run an individual test file located for example in `test/rubygems/test_deprecate.rb` you can use: 
+To run an individual test file located for example in `test/rubygems/test_deprecate.rb` you can use:
 
     ruby -Ilib:test:bundler/lib test/rubygems/test_deprecate.rb
-    
-And to run an individual test method named `test_default` within a test file, you can use: 
+
+And to run an individual test method named `test_default` within a test file, you can use:
 
     ruby -Ilib:test:bundler/lib test/rubygems/test_deprecate.rb -n /test_default/
 
@@ -80,9 +80,9 @@ To run the entire bundler test suite in parallel (it takes a while):
 
     bin/parallel_rspec
 
-To run the entire bundler test suite sequentially (get a coffee because it's very slow):
+There are some realworld higher level specs run in CI, but not run by `bin/parallel_rspec`. You can run those with:
 
-    bin/rspec
+    bin/rake spec:realworld
 
 To run an individual test file location for example in `spec/install/gems/standalone_spec.rb` you can use:
 

@@ -79,11 +79,11 @@ changelog.
 If PRs don't have a proper label, they won't be backported to patch releases.
 
 If you want a PR to be backported to a patch level release, but don't want to
-include it in the changelog, you can use the special `rubygems: backport` and
-`bundler: backport` labels. For example, this is useful when backporting a PR
-generates conflicts that are solved by backporting another PR with no user
-visible changes. You can use these special labels to also backport the other PR
-and not get any conflicts.
+include it in the changelog, you can use the special `rubygems: skip changelog`
+and `bundler: skip changelog` labels. For example, this is useful when
+backporting a PR generates conflicts that are solved by backporting another PR
+with no user visible changes. You can use these special labels to also backport
+the other PR and not get any conflicts.
 
 ### Steps for patch releases
 
@@ -95,22 +95,24 @@ and not get any conflicts.
     changelogs into master.
 *   Once CI passes, merge the release PR, switch to the stable branch and pull
     the PR just merged.
-*   Release `bundler` with `(cd bundler && bin/rake release)`.
+*   Release `bundler` with `rake bundler:release`.
 *   Release `rubygems` with `rake release`.
 
 ### Steps for minor and major releases
 
 *   Confirm all PRs that you want listed in changelogs are properly tagged with
     `rubygems: <type>` or `bundler: <type>` labels at GitHub.
-*   Run `rake prepare_release[<target_version>]`.
-*   Add the new stable branch `x.y` where `x.y` are the first two components of
-    the rubygems version being released to the CI workflows as an extra commit
-    on top of what the `prepare_release` task generated.
-*   Create a PR to the main branch, and merge it once CI passes.
-*   From the main branch, cut a new stable branch with `git pull && git checkout
-    -b x.y`.
-*   Push the stable branch and wait for CI to be green.
-*   Release `bundler` with `(cd bundler && bin/rake release)`.
+*   Run `rake prepare_release[<target_version>]`. This will create a new stable
+    branch off the master branch, and create a PR to it with the proper version
+    bumps and changelogs. It will also create a PR to merge release changelogs
+    into master.
+*   Replace the stable branch in the workflows with the new stable branch, and
+    push that change to the release PR.
+*   Replace version numbers with the next ".dev" version, and push that change
+    to the master PR.
+*   Once CI passes, merge the release PR, switch to  the stable branch and pull
+    the PR just merged.
+*   Release `bundler` with `rake bundler:release`.
 *   Release `rubygems` with `rake release`.
 
 ## Committer Access
@@ -126,8 +128,8 @@ permissions compromised or exposed.
 
 ## Changing These Policies
 
-These policies were set in order to reduce the burden of maintenance and to
-keep committers current with existing development and policies. RubyGems work
-is primarily volunteer-driven which limits the ability to provide long-term
-support. By joining [Ruby Together](https://rubytogether.org) you can help
-extend support for older RubyGems versions.
+These policies were set in order to reduce the burden of maintenance and to keep
+committers current with existing development and policies. RubyGems work is
+primarily volunteer-driven which limits the ability to provide long-term
+support. By joining [Ruby Central](https://rubycentral.org/#/portal/signup) you
+can help extend support for older RubyGems versions.

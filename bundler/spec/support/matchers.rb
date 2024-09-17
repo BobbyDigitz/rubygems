@@ -97,18 +97,6 @@ module Spec
       end
     end
 
-    RSpec::Matchers.define :take_less_than do |seconds|
-      match do |actual|
-        start_time = Time.now
-
-        actual.call
-
-        (Time.now - start_time).to_f < seconds
-      end
-
-      supports_block_expectations
-    end
-
     define_compound_matcher :read_as, [exist] do |file_contents|
       diffable
 
@@ -162,7 +150,7 @@ module Spec
           end
           if exitstatus == 65
             actual_platform = out.split("\n").last
-            next "#{name} was expected to be of platform #{platform} but was #{actual_platform}"
+            next "#{name} was expected to be of platform #{platform || "ruby"} but was #{actual_platform || "ruby"}"
           end
           if exitstatus == 66
             actual_source = out.split("\n").last

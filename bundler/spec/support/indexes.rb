@@ -14,19 +14,21 @@ module Spec
 
     alias_method :platforms, :platform
 
-    def resolve(args = [])
+    def resolve(args = [], dependency_api_available: true)
       @platforms ||= ["ruby"]
-      default_source = instance_double("Bundler::Source::Rubygems", :specs => @index, :to_s => "locally install gems")
-      source_requirements = { :default => default_source }
+      default_source = instance_double("Bundler::Source::Rubygems", specs: @index, to_s: "locally install gems", dependency_api_available?: dependency_api_available)
+      source_requirements = { default: default_source }
+      base = args[0] || Bundler::SpecSet.new([])
+      base.each {|ls| ls.source = default_source }
+      gem_version_promoter = args[1] || Bundler::GemVersionPromoter.new
+      originally_locked = args[2] || Bundler::SpecSet.new([])
+      unlock = args[3] || []
       @deps.each do |d|
-        source_requirements[d.name] = d.source = default_source
+        name = d.name
+        source_requirements[name] = d.source = default_source
       end
-      args[0] ||= Bundler::SpecSet.new([]) # base
-      args[0].each {|ls| ls.source = default_source }
-      args[1] ||= Bundler::GemVersionPromoter.new # gem_version_promoter
-      args[2] ||= [] # additional_base_requirements
-      args[3] ||= @platforms # platforms
-      Bundler::Resolver.new(source_requirements, *args).start(@deps)
+      packages = Bundler::Resolver::Base.new(source_requirements, @deps, base, @platforms, locked_specs: originally_locked, unlock: unlock)
+      Bundler::Resolver.new(packages, gem_version_promoter).start
     end
 
     def should_not_resolve
@@ -39,19 +41,18 @@ module Spec
       expect(got).to eq(specs.sort)
     end
 
+    def should_resolve_without_dependency_api(specs)
+      got = resolve(dependency_api_available: false)
+      got = got.map(&:full_name).sort
+      expect(got).to eq(specs.sort)
+    end
+
     def should_resolve_and_include(specs, args = [])
       got = resolve(args)
       got = got.map(&:full_name).sort
       specs.each do |s|
         expect(got).to include(s)
       end
-    end
-
-    def should_conflict_on(names)
-      got = resolve
-      raise "The resolve succeeded with: #{got.map(&:full_name).sort.inspect}"
-    rescue Bundler::VersionConflict => e
-      expect(Array(names).sort).to eq(e.conflicts.sort)
     end
 
     def gem(*args, &blk)
@@ -67,12 +68,11 @@ module Spec
     def should_conservative_resolve_and_include(opts, unlock, specs)
       # empty unlock means unlock all
       opts = Array(opts)
-      search = Bundler::GemVersionPromoter.new(@locked, unlock).tap do |s|
+      search = Bundler::GemVersionPromoter.new.tap do |s|
         s.level = opts.first
         s.strict = opts.include?(:strict)
-        s.prerelease_specified = Hash[@deps.map {|d| [d.name, d.requirement.prerelease?] }]
       end
-      should_resolve_and_include specs, [@base, search]
+      should_resolve_and_include specs, [@base, search, @locked, unlock]
     end
 
     def an_awesome_index
@@ -127,7 +127,7 @@ module Spec
             next if version == v("1.4.2.1") && platform != pl("x86-mswin32")
             next if version == v("1.4.2") && platform == pl("x86-mswin32")
             gem "nokogiri", version, platform do
-              dep "weakling", ">= 0.0.3" if platform =~ pl("java")
+              dep "weakling", ">= 0.0.3" if platform =~ pl("java") # rubocop:disable Performance/RegexpMatch
             end
           end
         end
@@ -304,7 +304,7 @@ module Spec
       end
     end
 
-    def a_unresovable_child_index
+    def a_unresolvable_child_index
       build_index do
         gem "json", %w[1.8.0]
 
