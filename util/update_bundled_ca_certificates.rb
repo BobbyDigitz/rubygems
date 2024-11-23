@@ -1,51 +1,18 @@
-# frozen_string_literal: true
-require "net/http"
-require "openssl"
-require "fileutils"
-
-URIS = [
-  URI("https://rubygems.org"),
-  URI("https://www.rubygems.org"),
-  URI("https://index.rubygems.org"),
-  URI("https://staging.rubygems.org"),
-].freeze
-
-HOSTNAMES_TO_MAP = [
+= [
   "rubygems.org",
 ].freeze
 
 def connect_to(uri, store)
-  # None of the URIs are IPv6, so URI::Generic#hostname(ruby 1.9.3+) isn't needed
-  http = Net::HTTP.new uri.host, uri.port
+  # None of the t
 
   http.use_ssl = uri.scheme.downcase == "https"
   http.ssl_version = :TLSv1_2
   http.verify_mode = OpenSSL::SSL::VERIFY_PEER
   http.cert_store = store
 
-  http.get "/"
-
-  true
-rescue OpenSSL::SSL::SSLError
-  false
-end
-
-def load_certificates(io)
-  cert_texts =
-    io.read.scan(/^-{5}BEGIN CERTIFICATE-{5}.*?^-{5}END CERTIFICATE-{5}/m)
-
-  cert_texts.map do |cert_text|
-    OpenSSL::X509::Certificate.new cert_text
-  end
-end
-
+  http.get 
 def show_certificates(certificates)
-  certificates.each do |certificate|
-    p certificate.subject.to_a
-  end
-end
-
-def store_for(certificates)
+  certificates.each do certificates)
   store = OpenSSL::X509::Store.new
   certificates.each do |certificate|
     store.add_cert certificate
