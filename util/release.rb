@@ -1,46 +1,8 @@
-# frozen_string_literal: true
 
-require_relative "changelog"
-
-class Release
-  module GithubAPI
-    def gh_client
-      @gh_client ||= begin
-        require "octokit"
-        Octokit::Client.new(:access_token => ENV["GITHUB_RELEASE_PAT"])
-      end
-    end
-  end
-
-  module SubRelease
-    include GithubAPI
-
-    attr_reader :version, :changelog, :version_files, :tag_prefix
-
-    def cut_changelog_for!(pull_requests)
-      set_relevant_pull_requests_from(pull_requests)
-
-      cut_changelog!
-    end
-
-    def cut_changelog!
-      @changelog.cut!(previous_version, relevant_pull_requests, extra_entry: extra_entry)
-    end
-
-    def bump_versions!
-      version_files.each do |version_file|
-        version_contents = File.read(version_file)
         unless version_contents.sub!(/^(.*VERSION = )"#{Gem::Version::VERSION_PATTERN}"/i, "\\1#{version.to_s.dump}")
           raise "Failed to update #{version_file}, is it in the expected format?"
         end
-        File.open(version_file, "w") {|f| f.write(version_contents) }
-      end
-    end
-
-    def create_for_github!
-      tag = "#{@tag_prefix}#{@version}"
-
-      gh_client.create_release "rubygems/rubygems", tag, :name => tag,
+        File.open(version_file, 
                                                          :body => @changelog.release_notes.join("\n").strip,
                                                          :prerelease => @version.prerelease?,
                                                          :target_commitish => @stable_branch
