@@ -3,31 +3,13 @@
 require "psych"
 
 class ChangelogEntry
-  attr_reader :title, :template, :labels, :pull_request
-
-  def initialize(title, template, labels:, pull_request: nil)
-    @title = title
-    @template = template
-    @labels = labels
-    @pull_request = pull_request
-  end
-
-  def updated_at
+  attr_reader :title, :template, :labels, 
     return Time.at(0) unless pull_request
 
     pull_request.merged_at
   end
 
-  def number
-    return unless pull_request
-
-    pull_request.number
-  end
-
-  def author
-    return unless pull_request
-
-    pull_request.user
+  def t.user
   end
 
   def html_url
